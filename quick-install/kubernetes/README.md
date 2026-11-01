@@ -17,6 +17,14 @@ What's wired up for an "apply it and it works" deploy:
   below).
 - **`OVC_PUBLIC_BASE_URL` is set** - without it, the Setup Agent one-liner /
   agent binary downloads fail outright with `OVC_AGENT_STORAGE=local`.
+- **One domain, asked once** - `apply.sh` asks for a base domain (default
+  `openvcenter.local`), substitutes it into every manifest at apply time and
+  keeps it in the `ovc-install` ConfigMap for later runs.
+- **Sign-in works from inside the cluster** - Keycloak's `KC_HOSTNAME` pins the
+  issuer to `http://keycloak.<domain>` with `KC_HOSTNAME_BACKCHANNEL_DYNAMIC`,
+  and `ovc-frontend` fetches discovery through the Service
+  (`OIDC_INTERNAL_URL`), since the Ingress host rarely resolves in a pod.
+  `apply.sh` ends with a check of exactly that.
 
 Target: a **kubernetes** cluster with Traefik as the Ingress controller for
 name-based routing. Persistent data uses `ReadWriteOnce` PVCs.
@@ -96,7 +104,9 @@ needs them):
 Add a `nodePort:` back to any of these `service.yaml` files (and switch
 `type` to `NodePort`) if you need direct external access for debugging.
 
-## Ingress (openvcenter.local)
+## Ingress
+
+Shown with the default domain; `apply.sh` replaces `openvcenter.local` with yours.
 
 One `ingress.yaml` per service folder, all under Traefik:
 
@@ -112,7 +122,7 @@ client machine, or a DNS server) - Traefik listens on the node at ports
 
 **If you skip DNS/hosts and use `http://<node-ip>:30300` instead:** login
 will fail with a Keycloak `redirect_uri` mismatch, because the imported
-realm only registers `http://frontend.openvcenter.local/*`. Either set up
+realm only registers `http://frontend.<domain>/*`. Either set up
 the hostname (simplest), or add your NodePort URL as an extra Redirect URI /
 Web Origin on the `ovc-frontend` client by hand in the Keycloak admin
 console.
@@ -124,13 +134,22 @@ hostname; clients keep using the `30672` NodePort directly.
 ## Apply
 
 ```sh
-./apply.sh
-# or manually:
+./apply.sh                            # asks for the base domain on first run
+./apply.sh --domain lab.example.com   # or pass it
+```
+
+By hand, the files apply as they are (domain `openvcenter.local`):
+
+```sh
 kubectl apply -f 00-namespace.yaml
 kubectl create secret generic ovc-frontend-secret -n ovc-infra \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
 kubectl apply -f ovc-postgres/ -f ovc-rabbitmq/ -f ovc-valkey/ -f ovc-keycloak/ -f ovc-guacd/ -f ovc-backend/ -f ovc-frontend/
 ```
+
+ Keycloak imports the realm only on first boot, so after
+changing the domain on an existing install, update the `ovc-frontend` client's
+redirect URIs in the Keycloak admin console (or `./delete.sh --purge` first).
 
 Tear down (keeps PVCs + the frontend secret):
 

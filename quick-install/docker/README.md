@@ -1,7 +1,7 @@
 # Open vCenter - Docker Compose quick install
 
 The whole stack as one `docker-compose.yaml` with the published images,
-everything behind a single **nginx** entrypoint on `http://localhost` instead
+everything behind a single **nginx** entrypoint on port 80 instead
 of separate per-service ports for the app itself. See
 [Docker Compose](https://openvcenter.com/docs/docker-compose/) for the reasoning behind the setup.
 What's wired up:
@@ -14,8 +14,21 @@ What's wired up:
 - **Keycloak is Postgres-backed with the `ovc` realm auto-imported** on
   first boot (`keycloak/ovc-realm.json`) - no manual realm/client creation,
   and it survives a `docker compose down` / `up` cycle.
-- **`BETTER_AUTH_SECRET` is generated, not hardcoded** - `up.sh` writes it
-  to `.env` on first run instead of shipping a fixed value in a public repo.
+- **One question, every URL** - `setup.sh` (called by `up.sh` on first run)
+  asks which hostname or IP browsers and Hyper-V hosts use to reach this
+  machine and writes `.env`: `OVC_PUBLIC_URL`, `OVC_KEYCLOAK_URL`,
+  `OVC_AGENT_RABBITMQ_URL`, plus a generated `BETTER_AUTH_SECRET` (never a
+  fixed value in a public repo). The compose file and the realm import read
+  them from there.
+- **Sign-in works from inside containers** - the browser reaches Keycloak at
+  `OVC_KEYCLOAK_URL`, but inside `ovc-frontend` "localhost" is the container
+  itself. So Keycloak pins its issuer with `KC_HOSTNAME` (plus
+  `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` for server-to-server URLs), and
+  `ovc-frontend` fetches discovery from `http://ovc-keycloak:8080`
+  (`OIDC_INTERNAL_URL`). `ovc-frontend` starts only once Keycloak is healthy,
+  and `up.sh` ends with a sign-in check from inside the frontend container.
+- **nginx survives container restarts** - it re-resolves service names through
+  Docker's DNS, and its header buffers fit better-auth's cookie-mode session.
 - **Consoles need only `guacd`** - `ovc-frontend` serves the Guacamole
   tunnel itself and reaches `ovc-guacd` over the internal Compose network
   (`GUACD_URL: ovc-guacd:4822`). guacd publishes no port: the browser never
@@ -29,9 +42,16 @@ What's wired up:
 ./up.sh
 ```
 
-Open `http://localhost` and log in with one of the realm's test users (see
-below). Tear down with `./down.sh` (`--purge` also drops the data volumes
-and `.env`).
+The first run asks for the host (default `localhost`, which only suits a
+browser on this machine and no real Hyper-V hosts - use the machine's DNS name
+or LAN IP otherwise). Open `http://<host>` and log in with one of the realm's
+test users (see below). Tear down with `./down.sh` (`--purge` also drops the
+data volumes and `.env`).
+
+To change the host later, run `./setup.sh` (or `./setup.sh --host <name>`) and
+then `./up.sh`. Keycloak imports the realm only on first boot, so either
+`./down.sh --purge` first or update the `ovc-frontend` client's redirect URIs
+in the Keycloak admin console.
 
 ## Roles / test logins
 
@@ -53,6 +73,7 @@ docker-compose.yaml    everything: backing services, keycloak, guacd,
 init-db/01-keycloak.sql   creates the "keycloak" DB on Postgres's first boot
 keycloak/ovc-realm.json   the "ovc" realm, imported automatically
 nginx/nginx.conf          the single entrypoint (:80 -> frontend / backend)
+setup.sh                  asks for the host, writes .env
 up.sh / down.sh
 ```
 
@@ -70,8 +91,8 @@ up.sh / down.sh
 | frontend (direct)   | 3000   | debug only - login here fails, see below            |
 
 `frontend` and `backend` stay published on their own ports too, for `curl`
-and Swagger - but **log in through `http://localhost` (nginx), not
-`:3000`**: the imported realm only registers `http://localhost/*` and
+and Swagger - but **log in through `http://<host>` (nginx), not
+`:3000`**: the imported realm only registers `http://<host>/*` and
 `http://localhost:3000/*` as redirect URIs, and `BETTER_AUTH_URL` /
 `OVC_PUBLIC_BASE_URL` are both pinned to the nginx origin, so a session
 started on `:3000` will misbehave past the login screen.
@@ -88,12 +109,11 @@ started on `:3000` will misbehave past the login screen.
   empty `keycloak` database). Edit the client by hand in the admin console
   afterwards, or `./down.sh --purge` and `./up.sh` again to re-trigger the
   import (loses all Postgres data, not just Keycloak's).
-- **Agent RabbitMQ URL**: `OVC_AGENT_RABBITMQ_URL` defaults to
-  `amqp://localhost:5672/`, which only works if a Hyper-V host's agent runs
-  on this same machine. Real Hyper-V hosts are separate Windows machines on
-  the LAN - point this at the Docker host's LAN-reachable IP or hostname
-  instead (edit it in `docker-compose.yaml` under `ovc-backend`, then
-  `docker compose up -d ovc-backend` to pick it up).
+- **Agent RabbitMQ URL**: `OVC_AGENT_RABBITMQ_URL` comes from the host
+  given to `setup.sh` (`amqp://<host>:5672/`). With `localhost` it only works
+  for an agent on this same machine; real Hyper-V hosts need the Docker host's
+  LAN-reachable name or IP. You can also edit it in `.env` directly and run
+  `docker compose up -d ovc-backend`.
 - **backend / frontend**: published as **public** GHCR images
   (`ghcr.io/openvcenter/ovc-backend`, `ovc-frontend`) - no registry
   login needed to pull them.

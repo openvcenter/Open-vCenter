@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 #
 # up.sh - bring up Open vCenter (published images) behind a single nginx
-# entrypoint on http://localhost:
+# entrypoint on port 80:
 #
 #   postgres 17 / rabbitmq / valkey / guacd / keycloak (postgres-backed,
 #   "ovc" realm auto-imported) / guacd / backend + worker / frontend / nginx
+#
+# First run calls ./setup.sh, which asks which host browsers and Hyper-V hosts
+# use to reach this machine and writes .env.
 #
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -28,13 +31,13 @@ else
   exit 1
 fi
 
-# BETTER_AUTH_SECRET is a session-signing key, not a shared default - unlike
-# every other password here it doesn't belong hardcoded in a public repo.
-# Generate one into .env on first run and keep reusing it afterwards.
-if [ ! -f .env ]; then
-  echo "==> generating .env (BETTER_AUTH_SECRET)"
-  echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env
+# .env holds the host-derived URLs and the generated BETTER_AUTH_SECRET.
+# setup.sh asks for the host the first time; re-run it to change the host.
+if ! grep -q '^OVC_HOST=' .env 2>/dev/null; then
+  ./setup.sh
 fi
+# shellcheck disable=SC1091
+source .env
 
 echo "==> pulling images..."
 "${COMPOSE[@]}" pull
@@ -46,18 +49,48 @@ echo
 echo "==> status:"
 "${COMPOSE[@]}" ps
 
-cat <<'EOF'
+# Sign-in check: the frontend container must reach Keycloak's discovery
+# document, and Keycloak must report the browser-facing issuer. ovc-frontend
+# only starts once Keycloak is healthy, so this normally passes at once.
+echo
+echo "==> checking sign-in configuration..."
+CHECK_JS='
+const want = process.env.OIDC_ISSUER;
+fetch(process.env.OIDC_INTERNAL_URL + "/.well-known/openid-configuration")
+  .then((r) => r.json())
+  .then((d) => {
+    if (d.issuer !== want) { console.log("issuer is " + d.issuer + ", expected " + want); process.exit(1); }
+    if (!d.authorization_endpoint.startsWith(want)) { console.log("authorization_endpoint " + d.authorization_endpoint + " is not browser-facing"); process.exit(1); }
+  })
+  .catch((e) => { console.log("discovery fetch failed: " + (e.cause?.code || e.message)); process.exit(1); });
+'
+ok=""
+for _ in $(seq 1 30); do
+  if out="$("${COMPOSE[@]}" exec -T ovc-frontend node -e "$CHECK_JS" 2>&1)"; then
+    ok=1
+    break
+  fi
+  sleep 5
+done
+if [ -n "$ok" ]; then
+  echo "    OK - frontend reaches Keycloak; issuer is ${OVC_KEYCLOAK_URL}/realms/ovc"
+else
+  echo "    FAIL - $out" >&2
+  echo "    Look at: docker compose logs ovc-keycloak ovc-frontend" >&2
+fi
 
-Open vCenter:  http://localhost
+cat <<EOF
+
+Open vCenter:  ${OVC_PUBLIC_URL}
   test logins (realm "ovc", client "ovc-frontend"):
     admin/admin        - ADMINISTRATOR (full access)
     operator/operator  - MANAGE_VMS   (login only - no scope granted yet, sees nothing)
     noroles/noroles    - no role      (redirected to /access-denied)
 
 Other services:
-  keycloak admin console   http://localhost:8080         (admin/admin)
-  rabbitmq management      http://localhost:15672        (ovc/PleaseChangeMe1)
-  backend direct/Swagger   http://localhost:8000/api/docs
+  keycloak admin console   ${OVC_KEYCLOAK_URL}         (admin/admin)
+  rabbitmq management      http://${OVC_HOST}:15672        (ovc/PleaseChangeMe1)
+  backend direct/Swagger   http://${OVC_HOST}:8000/api/docs
 
 Logs:  docker compose logs -f
 Stop:  ./down.sh

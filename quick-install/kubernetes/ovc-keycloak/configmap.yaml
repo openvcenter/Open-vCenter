@@ -14,5 +14,9 @@ data:
   KC_DB_USERNAME: ovc
   KC_DB_PASSWORD: PleaseChangeMe1
   KC_HEALTH_ENABLED: "true"
-  KC_HOSTNAME_STRICT: "false" # dev: needed behind a NodePort / plain HTTP
+  # The issuer and browser-facing URLs are pinned to the Ingress host, whatever
+  # hostname a request used; in-cluster calls (ovc-frontend's token exchange,
+  # ovc-backend's JWKS) go to the Service and get back URLs on that address.
+  KC_HOSTNAME: http://keycloak.openvcenter.local
+  KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
   KC_HTTP_ENABLED: "true"

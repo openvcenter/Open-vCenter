@@ -15,7 +15,10 @@ data:
 
   # OIDC. ISSUER must be the URL the *browser* used to reach Keycloak (its
   # Ingress host), since that's what ends up in the token's `iss` claim.
+  # INTERNAL_URL is the same issuer as this pod reaches it - the Ingress host
+  # usually doesn't resolve inside the cluster.
   OIDC_ISSUER: http://keycloak.openvcenter.local/realms/ovc
+  OIDC_INTERNAL_URL: http://ovc-keycloak-service-nodeport:8080/realms/ovc
   OIDC_CLIENT_ID: ovc-frontend
   OIDC_CLIENT_SECRET: ovc-frontend-dev-secret
 

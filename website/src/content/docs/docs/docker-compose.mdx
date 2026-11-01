@@ -16,7 +16,7 @@ the internal Compose network: only `ovc-frontend`'s server talks to it
 is a hardened, ready-to-run version of this - everything behind a single
 nginx entrypoint, Keycloak's realm auto-imported, the session secret
 generated on first run. This page explains the *why*; the linked README
-has the actual compose file and `up.sh` / `down.sh`.
+has the actual compose file and `setup.sh` / `up.sh` / `down.sh`.
 :::
 
 <StackExplorerIsland mode="docker" />
@@ -44,10 +44,22 @@ cd Open-vCenter/quick-install/docker
 curl localhost:8000/api/health   # {"ok":true,"db":true,"cache":true,"rabbit":true}
 ```
 
-`up.sh` generates the frontend's session secret into `.env` on first run, so
-use it rather than a bare `docker compose up`. Open `http://localhost` and log
-in as `admin` / `admin`. `./down.sh` tears it down (`--purge` also drops the
-data volumes and `.env`).
+On first run `up.sh` calls `setup.sh`, which asks one question: the hostname
+or IP that browsers **and** your Hyper-V hosts use to reach this machine
+(default `localhost`, which only suits a browser on the same machine). It
+writes `.env` with every URL derived from that host - the app
+(`http://<host>`), Keycloak (`http://<host>:8080`), the agents' RabbitMQ URL
+(`amqp://<host>:5672/`) - plus a generated session secret. Re-run
+`./setup.sh` to change the host (`--host <name>` skips the prompt).
+
+When everything is up, `up.sh` checks sign-in from inside the frontend
+container and prints `OK` or what failed. Open `http://<host>` and log in as
+`admin` / `admin`. `./down.sh` tears it down (`--purge` also drops the data
+volumes and `.env`).
+
+Keycloak imports the realm only on first boot. After changing the host on an
+existing install, `./down.sh --purge` and `./up.sh` again, or update the
+`ovc-frontend` client's redirect URIs in the Keycloak admin console.
 
 Hosts are added and agents installed from the frontend once you're logged
 in - see

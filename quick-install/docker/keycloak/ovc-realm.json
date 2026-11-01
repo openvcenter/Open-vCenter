@@ -29,14 +29,14 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost/frontend-api/auth/callback/oidc",
-        "http://localhost/*",
+        "${OVC_PUBLIC_URL}/frontend-api/auth/callback/oidc",
+        "${OVC_PUBLIC_URL}/*",
         "http://localhost:3000/frontend-api/auth/callback/oidc",
         "http://localhost:3000/*"
       ],
-      "webOrigins": ["http://localhost", "http://localhost:3000"],
+      "webOrigins": ["${OVC_PUBLIC_URL}", "http://localhost:3000"],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost/*##http://localhost:3000/*"
+        "post.logout.redirect.uris": "${OVC_PUBLIC_URL}/*##http://localhost:3000/*"
       },
       "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "basic", "email"],
       "protocolMappers": [

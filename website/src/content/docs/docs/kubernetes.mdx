@@ -56,6 +56,26 @@ provider - any works (Keycloak, Auth0, Okta, Entra ID). Roles are read from a
 configurable claim (`resource_access.<client_id>.roles` by default) - see
 [Roles](#roles) below.
 
+The provider has two addresses, and each service needs to know both:
+
+| Setting | `ovc-frontend` | `ovc-backend` |
+| --- | --- | --- |
+| Issuer, as the **browser** reaches it (it ends up in the token's `iss`) | `OIDC_ISSUER` | `OVC_OIDC_ISSUER` |
+| The same provider, as **the server** reaches it | `OIDC_INTERNAL_URL` (issuer URL) | `OVC_OIDC_JWKS_URL` (JWKS URL) |
+
+In containers they differ: the browser uses e.g. `http://keycloak.example.com`,
+while the pods use the Service name. `ovc-frontend` fetches only the discovery
+document from `OIDC_INTERNAL_URL`, so the provider must answer with a
+browser-facing `authorization_endpoint` and server-reachable token, userinfo
+and JWKS endpoints. With Keycloak, set `KC_HOSTNAME` to its public URL and
+`KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`. Without `OIDC_INTERNAL_URL` the
+frontend uses `OIDC_ISSUER` for everything, which is right when the server can
+reach the public URL too.
+
+If the provider is unreachable when `ovc-frontend` starts, the login screen
+says so and the frontend retries discovery every few seconds - no restart
+needed once the provider is up.
+
 **No IdP, lab/demo deployment:** set `OVC_AUTH_MODE: stub` in both
 `ovc-backend`'s and `ovc-frontend`'s config instead.
 
@@ -94,7 +114,11 @@ sessions.
 
 See [`quick-install/kubernetes`](https://github.com/openvcenter/Open-vCenter/tree/main/quick-install/kubernetes)
 for the actual manifests, NodePorts, optional Ingress and `apply.sh` /
-`delete.sh`.
+`delete.sh`. `apply.sh` asks for a base domain once (default
+`openvcenter.local`; the hosts become `frontend.<domain>`, `keycloak.<domain>`,
+`rabbitmq-management.<domain>` and, for the agents, `rabbitmq.<domain>`), applies
+the manifests with it,
+and finishes with a sign-in check from inside the frontend pod.
 
 Once `ovc-frontend` is reachable, open it to add a host and install its
 agent - see
