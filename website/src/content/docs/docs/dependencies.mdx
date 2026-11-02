@@ -13,8 +13,8 @@ ready-made deployment of the whole stack, see
 **Used by:** `ovc-backend`
 
 System of record: clusters, hosts, folders, VMs (extended inventory),
-templates, ISOs, tasks (with the raw agent request/response), and scope grants
-for RBAC. The schema is managed by **Alembic** migrations (`alembic upgrade head`).
+templates, ISOs, tasks (with the raw agent request/response), roles and
+permissions, and the audit log. The schema is managed by **Alembic** migrations (`alembic upgrade head`).
 The database starts empty - register hosts with `POST /api/hosts`.
 
 ## RabbitMQ - 4
@@ -51,9 +51,10 @@ Cache and coordination, not a system of record:
 
 Any OpenID Connect provider with a discovery document works - Keycloak, Auth0,
 Okta, Entra ID. The frontend runs `better-auth` in cookie mode; the backend
-verifies the JWT when `OVC_AUTH_MODE=oidc`. Roles are read from a configurable
-claim (default `resource_access.${client_id}.roles`); the `ADMINISTRATOR` role
-bypasses every scope filter.
+verifies the JWT when `OVC_AUTH_MODE=oidc`. The user's groups are read from one
+configurable claim (default `resource_access.${client_id}.roles`); the
+`ADMINISTRATOR` group holds every privilege, and the others get what their
+[permissions](/docs/kubernetes/#access-control) grant.
 
 Register `${app}/frontend-api/auth/callback/oidc` as a redirect URI.
 

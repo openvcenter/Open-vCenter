@@ -13,15 +13,15 @@ using the published container images. Pick one:
 Both auto-import a ready-to-use Keycloak realm (`ovc`, client
 `ovc-frontend`) with three test logins:
 
-| Login                     | Role            | What happens                                    |
-| ------------------------- | --------------- | -------------------------------------------------- |
-| `admin` / `admin`         | `ADMINISTRATOR` | Full access.                                     |
-| `operator` / `operator`   | `MANAGE_VMS`    | Logs in, sees nothing until a scope grant exists. |
-| `noroles` / `noroles`     | *(none)*        | Redirected to `/access-denied`.                  |
+| Login                   | Group           | What happens                                                            |
+| ----------------------- | --------------- | ----------------------------------------------------------------------- |
+| `admin` / `admin`       | `ADMINISTRATOR` | Full access.                                                            |
+| `operator` / `operator` | `MANAGE_VMS`    | Logs in to an empty tree until a permission is granted to `MANAGE_VMS`. |
+| `noroles` / `noroles`   | *(none)*        | Redirected to `/access-denied`.                                         |
 
 These are for kicking the tyres - see each folder's README for how to
-change them, and [Roles](https://openvcenter.com/docs/kubernetes/#roles) for what the app
-actually does with a role once you're past login.
+change them, and [Access control](https://openvcenter.com/docs/kubernetes/#access-control) for what the app
+actually does with a group once you're past login.
 
 ## How this relates to the docs
 

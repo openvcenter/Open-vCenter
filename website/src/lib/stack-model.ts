@@ -155,7 +155,7 @@ export const COMPONENTS: ComponentMeta[] = [
     kind: "data",
     tagline: "System of record",
     description:
-      "Clusters, hosts, folders, VMs, templates, ISOs, tasks (with the raw agent request and response) and RBAC scope grants. Schema managed by Alembic. Keycloak keeps its own database on the same server.",
+      "Clusters, hosts, folders, VMs, templates, ISOs, tasks (with the raw agent request and response), roles, permissions and the audit log. Schema managed by Alembic. Keycloak keeps its own database on the same server.",
     sources: {
       docker: ["ovc-postgres"],
       k8s: [

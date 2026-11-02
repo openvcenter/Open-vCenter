@@ -22,7 +22,7 @@ and layout.
   fallback in the rule that uses it instead (see `components.css`).
 - Check a visual change in all four skins.
 - The docs in `src/content/docs/docs/` are the only copy of the documentation.
-  Internal links are absolute (`/docs/kubernetes/#roles`); keep headings stable,
+  Internal links are absolute (`/docs/kubernetes/#access-control`); keep headings stable,
   their slugs are link targets. Wrap any React island in `not-content` (as
   `StackExplorerIsland` does) so Starlight's prose styles leave it alone.
 - Docs CSS has no Tailwind preflight: islands used in the docs get a small

@@ -121,7 +121,7 @@ cat <<EOF
 
 Test logins (realm "ovc", client "ovc-frontend"):
   admin/admin        - ADMINISTRATOR (full access)
-  operator/operator  - MANAGE_VMS   (login only - no scope granted yet, sees nothing)
+  operator/operator  - MANAGE_VMS   (login only - empty tree until granted a permission)
   noroles/noroles    - no role      (redirected to /access-denied)
 
 Open http://frontend.$DOMAIN once DNS/hosts resolves it, or

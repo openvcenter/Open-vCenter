@@ -25,8 +25,8 @@ has the actual compose file and `setup.sh` / `up.sh` / `down.sh`.
 
 By default `ovc-backend` and `ovc-frontend` wire up to Keycloak (or any
 other OIDC/OAuth2 provider) for real login - see
-[OIDC provider](/docs/kubernetes/#oidc-provider) and [Roles](/docs/kubernetes/#roles) for
-how roles are read and what each one grants.
+[OIDC provider](/docs/kubernetes/#oidc-provider) and [Access control](/docs/kubernetes/#access-control)
+for how groups are read and what they grant.
 
 **No IdP, quick testing only:** set `OVC_AUTH_MODE: stub` on both
 `ovc-backend` and `ovc-frontend` instead - every request is then treated as

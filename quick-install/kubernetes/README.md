@@ -68,14 +68,14 @@ never overwrites afterwards.
 ## Roles / test logins
 
 The imported realm ships three client roles on `ovc-frontend` and one test
-user per role (see [Roles](https://openvcenter.com/docs/kubernetes/#roles) for what each
+user per role - OVC reads them as the user's groups (see [Access control](https://openvcenter.com/docs/kubernetes/#access-control) for what each
 grants):
 
-| Login                   | Role            | What happens                                                                                                                     |
-| ----------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `admin` / `admin`       | `ADMINISTRATOR` | Full access to every cluster/host/folder/VM.                                                                                     |
-| `operator` / `operator` | `MANAGE_VMS`    | Logs in, sees nothing until a scope grant is added (there's no admin UI for that yet - it's a `ScopeGrant` row in the database). |
-| `noroles` / `noroles`   | _(none)_        | Redirected to `/access-denied`.                                                                                                  |
+| Login                   | Group           | What happens                                                                                                        |
+| ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `admin` / `admin`       | `ADMINISTRATOR` | Full access to every cluster/host/folder/VM.                                                                        |
+| `operator` / `operator` | `MANAGE_VMS`    | Logs in to an empty tree until an administrator grants `MANAGE_VMS` a permission (an object's **Permissions** tab). |
+| `noroles` / `noroles`   | _(none)_        | Redirected to `/access-denied`.                                                                                     |
 
 Change or remove these once you're past a first login - they're plain-text
 in `ovc-keycloak/configmap-realm.yaml`, meant for kicking the tyres only.

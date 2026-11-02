@@ -84,7 +84,7 @@ cat <<EOF
 Open vCenter:  ${OVC_PUBLIC_URL}
   test logins (realm "ovc", client "ovc-frontend"):
     admin/admin        - ADMINISTRATOR (full access)
-    operator/operator  - MANAGE_VMS   (login only - no scope granted yet, sees nothing)
+    operator/operator  - MANAGE_VMS   (login only - empty tree until granted a permission)
     noroles/noroles    - no role      (redirected to /access-denied)
 
 Other services:

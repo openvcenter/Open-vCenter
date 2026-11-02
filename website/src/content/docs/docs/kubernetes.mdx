@@ -52,9 +52,9 @@ in ConfigMaps. For a production deployment, move the passwords into
 ## OIDC provider
 
 `ovc-backend` and `ovc-frontend` default to real OIDC login against a
-provider - any works (Keycloak, Auth0, Okta, Entra ID). Roles are read from a
-configurable claim (`resource_access.<client_id>.roles` by default) - see
-[Roles](#roles) below.
+provider - any works (Keycloak, Auth0, Okta, Entra ID). The user's groups are
+read from a configurable claim (`resource_access.<client_id>.roles` by default) -
+see [Access control](#access-control) below.
 
 The provider has two addresses, and each service needs to know both:
 
@@ -79,18 +79,28 @@ needed once the provider is up.
 **No IdP, lab/demo deployment:** set `OVC_AUTH_MODE: stub` in both
 `ovc-backend`'s and `ovc-frontend`'s config instead.
 
-### Roles
+### Access control
 
-The app recognizes exactly one role by name:
+Access is granted to **groups**, never to individual users. The backend reads
+the user's groups from one token claim, `OVC_OIDC_GROUPS_CLAIM` (a dot path;
+default `resource_access.${client_id}.roles`, i.e. Keycloak client roles). Set
+the frontend's `OIDC_GROUPS_CLAIM` to the same path. For another provider,
+point both at its groups claim, e.g. `groups` or `roles` for Entra ID.
 
-| Role               | Grants                                                                                                                                                                             |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ADMINISTRATOR`    | Full access to every cluster, host, folder and VM - no further setup needed. Configurable via `OVC_ADMIN_ROLE` on the backend.                                                     |
-| _(any other role)_ | Login only. Visibility is then controlled per-user by scope grants (global/cluster/host/folder) recorded on the backend - none yet means the user sees nothing until one is added. |
-| _(no role at all)_ | Redirected to `/access-denied` right after login.                                                                                                                                  |
+| Group               | Access                                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `ADMINISTRATOR`     | Every privilege on every object, with no setup needed. Configurable via `OVC_ADMIN_GROUP` on the backend. |
+| _(any other group)_ | Logs in. Sees and does only what the permissions granted to its groups allow; none means an empty tree.   |
+| _(no group at all)_ | Redirected to `/access-denied` right after login.                                                         |
 
-For a first deployment, assign `ADMINISTRATOR` to at least one user so
-someone can log in and add hosts.
+Permissions are managed in the UI: **Administration ▸ Roles** defines roles
+(named sets of privileges such as power, console or snapshots), and each
+cluster, host, folder and VM has a **Permissions** tab that grants a role to a
+group on that object. A permission propagates to the objects below it unless
+told not to; the built-in **No access** role blocks a branch.
+
+For a first deployment, put at least one user in `ADMINISTRATOR` so someone
+can log in, add hosts and grant permissions to the other groups.
 
 ## ovc-backend and ovc-frontend
 
