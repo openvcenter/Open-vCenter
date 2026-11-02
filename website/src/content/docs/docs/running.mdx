@@ -40,7 +40,6 @@ Or with Docker (API + worker only; reaches the infra via
 ```sh
 docker compose up -d
 curl localhost:8000/api/health   # {"ok":true,"db":true,"cache":true,"rabbit":true}
-docker compose --profile demo up -d   # optional synthetic agent, no Windows host
 ```
 
 ## 3. Frontend - `ovc-frontend`
